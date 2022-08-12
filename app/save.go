@@ -59,34 +59,23 @@ func getSumTokens() int64 {
 func saveDB() {
 	hours, _, _ := time.Now().Clock()
 
-	bulk := make(map[int]saveData)
-	update := make(map[int64]int64)
+	bulk := []saveData{}
+	update := []struct {
+		Rid int64
+		Now int64
+	}{}
+
 	data := make(map[string]*DonatorCache)
 	index := make(map[string]int64)
+
+	ticker := time.NewTicker(10 * time.Second)
 
 	index = map[string]int64{"hours": int64(hours), "tokens": getSumTokens(), "last": time.Now().Unix()}
 
 	for {
 		select {
-		case m := <-save:
-			//fmt.Println("Save channel:", len(save), cap(save))
-
-			now := time.Now().Unix()
-
-			if _, ok := data[m.From]; ok {
-				data[m.From].Last = now
-			} else {
-				data[m.From] = &DonatorCache{Id: getDonId(m.From), Last: now}
-			}
-
-			num := len(bulk)
-
-			bulk[num] = m
-
-			update[m.Rid] = m.Now
-
-			if num > 512 {
-
+		case <-ticker.C:
+			if len(bulk) > 0 {
 				tx, err := Mysql.Begin()
 				if err == nil {
 					st, _ := tx.Prepare("INSERT INTO `stat` (`did`, `rid`, `token`, `time`) VALUES (?, ?, ?, ?)")
@@ -100,8 +89,8 @@ func saveDB() {
 				tx, err = Mysql.Begin()
 				if err == nil {
 					st, _ := tx.Prepare("UPDATE `room` SET `last` = ? WHERE `id` = ?")
-					for k, v := range update {
-						st.Exec(v, k)
+					for _, v := range update {
+						st.Exec(v.Now, v.Rid)
 					}
 					tx.Commit()
 					st.Close()
@@ -117,9 +106,28 @@ func saveDB() {
 					st.Close()
 				}
 
-				bulk = make(map[int]saveData)
-				update = make(map[int64]int64)
+				bulk = nil
+				update = nil
 			}
+		case m := <-save:
+			//fmt.Println("Save channel:", len(save), cap(save))
+
+			now := time.Now().Unix()
+
+			if _, ok := data[m.From]; ok {
+				data[m.From].Last = now
+			} else {
+				data[m.From] = &DonatorCache{Id: getDonId(m.From), Last: now}
+			}
+
+			bulk = append(bulk, m)
+			update = append(update, struct {
+				Rid int64
+				Now int64
+			}{
+				Rid: m.Rid,
+				Now: m.Now,
+			})
 
 			if m.Amount > 99 {
 				msg, err := json.Marshal(struct {
@@ -168,25 +176,26 @@ func saveDB() {
 }
 
 func saveLogs() {
-	bulk := make(map[int]saveLog)
+	bulk := []saveLog{}
+	ticker := time.NewTicker(10 * time.Second)
 	for {
 		select {
+		case <-ticker.C:
+			if len(bulk) > 0 {
+				tx, err := Mysql.Begin()
+				if err == nil {
+					st, _ := tx.Prepare("INSERT INTO `logs` (`rid`, `time`, `mes`) VALUES (?, ?, ?)")
+					for _, v := range bulk {
+						st.Exec(v.Rid, v.Now, v.Mes)
+					}
+					tx.Commit()
+					st.Close()
+				}
+				bulk = nil
+			}
 		case m := <-slog:
 			if len(m.Mes) > 0 {
-				num := len(bulk)
-				bulk[num] = m
-				if num > 2048 {
-					tx, err := Mysql.Begin()
-					if err == nil {
-						st, _ := tx.Prepare("INSERT INTO `logs` (`rid`, `time`, `mes`) VALUES (?, ?, ?)")
-						for _, v := range bulk {
-							st.Exec(v.Rid, v.Now, v.Mes)
-						}
-						tx.Commit()
-						st.Close()
-					}
-					bulk = make(map[int]saveLog)
-				}
+				bulk = append(bulk, m)
 			}
 		}
 	}

@@ -127,6 +127,11 @@ func xWorker(workerData Info, u url.URL) {
 
 		now := time.Now().Unix()
 
+		if now > workerData.Start+60*60*8 {
+			fmt.Println("too_long exit:", workerData.room)
+			return
+		}
+
 		m := string(message)
 		slog <- saveLog{Rid: workerData.Rid, Now: now, Mes: m}
 
