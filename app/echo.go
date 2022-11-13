@@ -6,6 +6,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var upgrader = websocket.Upgrader{
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
+    CheckOrigin: func(r *http.Request) bool {
+		if r.Header.Get("origin") == "https://statbate.com" {
+			return true
+		}
+		return false
+	},
+}
+
 var (
 	wsClients = make(map[*websocket.Conn]struct{})
 
@@ -41,7 +52,7 @@ func broadcast() {
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := websocket.Upgrade(w, r, w.Header(), 1024, 1024)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
