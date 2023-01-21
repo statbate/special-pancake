@@ -23,14 +23,14 @@ type Input struct {
 type TipMsg struct {
 	Channel  string `json:"channel"`
 	Messages []struct {
-		Name   string `json:"name"`
-		Amount int64  `json:"amount"`
-		From   string `json:"from_username"`
+		Data string `json:"data"`
 	} `json:"messages"`
 }
 
 type Donate struct {
-	Amount int64 `json:"amount"`
+	Name   string `json:"name"`
+	From   string `json:"from_username"`
+	Amount int64  `json:"amount"`
 }
 
 func getAuth(room string) (string, string, error) {
@@ -295,21 +295,27 @@ func statRoom(room, server string, _ url.URL) {
 
 			*/
 
-			donate := &TipMsg{}
+			tipMsg := &TipMsg{}
 
 			timeout = time.Now().Unix() + 60*60
 
-			if err := json.Unmarshal([]byte(m), &donate); err != nil {
+			if err := json.Unmarshal([]byte(m), tipMsg); err != nil {
 				fmt.Println(err.Error())
 				continue
 			}
-			fmt.Printf("donate %#+v\n", donate)
-			if donate.Channel != "room:tip_alert:"+room_uid {
+			// fmt.Printf("msg %s\n", m)
+
+			if tipMsg.Channel != "room:tip_alert:"+room_uid {
 				continue
 			}
-			for _, msg := range donate.Messages {
-				if len(msg.From) > 3 {
-					fmt.Println(msg.From, " send ", msg.Amount, "tokens")
+			for _, msg := range tipMsg.Messages {
+				donate := &Donate{}
+				if err := json.Unmarshal([]byte(msg.Data), donate); err != nil {
+					fmt.Println(err.Error())
+					continue
+				}
+				if len(donate.From) > 3 {
+					fmt.Println(donate.From, " send ", donate.Amount, "tokens")
 				}
 			}
 
