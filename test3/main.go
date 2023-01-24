@@ -24,7 +24,7 @@ func main() {
 	c, err := ably.NewRealtime(
 		ably.WithAutoConnect(true),
 		ably.WithToken(authToken),
-		// ably.WithLogLevel(ably.LogDebug),
+		ably.WithLogLevel(ably.LogDebug),
 		ably.WithAuthMethod(http.MethodGet),
 		ably.WithUseTokenAuth(true),
 		ably.WithRealtimeHost("realtime.pa.highwebmedia.com"),
@@ -41,8 +41,10 @@ func main() {
 	}
 
 	type leaveMsg struct {
-		Action        string `json:"action"`
-		IsBroadcaster bool   `json:"is_broadcaster"`
+		Action string `json:"action"`
+		User   struct {
+			IsBroadcaster bool `json:"is_broadcaster"`
+		} `json:"user"`
 	}
 
 	tipChannel := "room:tip_alert:" + room_uid
@@ -57,7 +59,10 @@ func main() {
 				cancel()
 				return
 			}
-			if leave.Action == "leave" && leave.IsBroadcaster {
+			/*
+
+			 */
+			if leave.Action == "leave" && leave.User.IsBroadcaster {
 				fmt.Println("user finished and exit")
 				cancel()
 				return
