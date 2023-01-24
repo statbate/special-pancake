@@ -57,7 +57,7 @@ func statRoom(room, room_uid, authToken string) {
 			break
 		}
 
-		//m := string(message)
+		fmt.Println(string(message))
 
 		input := struct {
 			Action   int    `json:"action"`
@@ -107,7 +107,7 @@ func statRoom(room, room_uid, authToken string) {
 				}{}
 					
 				for _, tip := range tips {
-					if err := json.Unmarshal([]byte(tip.Data), donate); err != nil {
+					if err := json.Unmarshal([]byte(tip.Data), &donate); err != nil {
 						fmt.Println(err.Error())
 						continue
 					}
