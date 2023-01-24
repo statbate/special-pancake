@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"net/url"
 	"os"
 )
 
@@ -12,15 +11,14 @@ func randInt(min int, max int) int {
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("./test room server")
+	if len(os.Args) < 4 {
+		fmt.Println("./test room room_uid authToken")
 		return
 	}
 
 	room := os.Args[1]
-	server := os.Args[2]
+	room_uid := os.Args[2]
+	authToken := os.Args[3]
 
-	u := url.URL{Scheme: "wss", Host: server + ".highwebmedia.com", Path: "/ws/555/kmdqiune/websocket"}
-
-	statRoom(room, server, u)
+	statRoom(room, room_uid, authToken)
 }
