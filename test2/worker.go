@@ -87,16 +87,18 @@ func statRoom(room, room_uid, authToken string) {
 			
 			timeout = time.Now().Unix() + 60*60
 			
-			tips := []struct {
-					Data string `json:"data"`
-			}{}
-
-			if err := json.Unmarshal([]byte(m), &tips); err != nil {
-				fmt.Println(err.Error())
-				continue
-			}
+			
 			
 			if input.Channel == "room:tip_alert:"+room_uid {
+				
+				tips := []struct {
+					Data string `json:"data"`
+				}{}
+
+				if err := json.Unmarshal([]byte(m), &tips); err != nil {
+					fmt.Println(err.Error())
+					continue
+				}
 				
 				donate := struct {
 					Name   string `json:"to_username"`
