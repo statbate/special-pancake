@@ -57,7 +57,7 @@ func statRoom(room, room_uid, authToken string) {
 			break
 		}
 
-		m := string(message)
+		//m := string(message)
 
 		input := struct {
 			Action   int    `json:"action"`
@@ -95,7 +95,7 @@ func statRoom(room, room_uid, authToken string) {
 					Data string `json:"data"`
 				}{}
 
-				if err := json.Unmarshal([]byte(m), &tips); err != nil {
+				if err := json.Unmarshal([]byte(input.Messages), &tips); err != nil {
 					fmt.Println(err.Error())
 					continue
 				}
