@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"time"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -25,23 +26,23 @@ func statRoom(room, room_uid, authToken string) {
 	initMessages := []string{
 		`{"action":16, "connectionKey":{"accessToken":"` + authToken + `"}}`,
 		`{"action":10,"flags":327680,"channel":"room:tip_alert:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:purchase:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:fanclub:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:message:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"global:push_service","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room_anon:presence:` + room_uid + `:0","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:quality_update:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:notice:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:purchase:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:fanclub:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:message:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"global:push_service","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room_anon:presence:` + room_uid + `:0","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:quality_update:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:notice:` + room_uid + `","params":{}}`,
 		`{"action":10,"flags":327680,"channel":"room:enter_leave:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:password_protected:` + room_uid + `:13","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:mod_promoted:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:mod_revoked:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:status:` + room_uid + `:13","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:title_change:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:silence:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:password_protected:` + room_uid + `:13","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:mod_promoted:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:mod_revoked:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:status:` + room_uid + `:13","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:title_change:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:silence:` + room_uid + `","params":{}}`,
 		`{"action":10,"flags":327680,"channel":"room:kick:` + room_uid + `","params":{}}`,
 		`{"action":10,"flags":327680,"channel":"room:update:` + room_uid + `","params":{}}`,
-		`{"action":10,"flags":327680,"channel":"room:settings:` + room_uid + `","params":{}}`,
+		//`{"action":10,"flags":327680,"channel":"room:settings:` + room_uid + `","params":{}}`,
 	}
 
 	for {
@@ -60,13 +61,13 @@ func statRoom(room, room_uid, authToken string) {
 		fmt.Println(string(message))
 
 		input := struct {
-			Action   int    `json:"action"`
-			Key      string `json:"connectionkey"`
+			Action   int             `json:"action"`
+			Key      string          `json:"connectionkey"`
 			Error    json.RawMessage `json:"error"`
-			Channel  string `json:"channel"`
+			Channel  string          `json:"channel"`
 			Messages json.RawMessage `json:"messages"`
 		}{}
-		
+
 		if err := json.Unmarshal(message, &input); err != nil {
 			fmt.Println(err.Error())
 			break
@@ -80,17 +81,13 @@ func statRoom(room, room_uid, authToken string) {
 			}
 			init = true
 		}
-		
-		
 
 		if input.Action == 15 {
-			
+
 			timeout = time.Now().Unix() + 60*60
-			
-			
-			
+
 			if input.Channel == "room:tip_alert:"+room_uid {
-				
+
 				tips := []struct {
 					Data string `json:"data"`
 				}{}
@@ -99,13 +96,13 @@ func statRoom(room, room_uid, authToken string) {
 					fmt.Println(err.Error())
 					continue
 				}
-				
+
 				donate := struct {
 					Name   string `json:"to_username"`
 					From   string `json:"from_username"`
 					Amount int64  `json:"amount"`
 				}{}
-					
+
 				for _, tip := range tips {
 					if err := json.Unmarshal([]byte(tip.Data), &donate); err != nil {
 						fmt.Println(err.Error())
