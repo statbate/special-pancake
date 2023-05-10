@@ -15,7 +15,8 @@ var memInfo runtime.MemStats
 type Info struct {
 	ch     chan struct{}
 	room   string
-	Server string `json:"server"`
+	Id     string `json:"room_id"`
+	Auth   string `json:"auth"`
 	Proxy  string `json:"proxy"`
 	Online string `json:"online"`
 	Rid    int64  `json:"rid"`
@@ -75,11 +76,12 @@ func cmdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	params := r.URL.Query()
-	if len(params["room"]) > 0 && len(params["server"]) > 0 && len(params["proxy"]) > 0 {
+	if len(params["room"]) > 0 && len(params["id"]) > 0 && len(params["auth"]) > 0 && len(params["proxy"]) > 0 {
 		now := time.Now().Unix()
 		workerData := Info{
 			room:   params["room"][0],
-			Server: params["server"][0],
+			Id:     params["id"][0],
+			Auth:   params["auth"][0],
 			Proxy:  params["proxy"][0],
 			Online: "0",
 			Start:  now,
@@ -114,5 +116,6 @@ func startRoom(workerData Info) {
 	workerData.Rid = rid
 	workerData.ch = make(chan struct{})
 
-	go xWorker(workerData, url.URL{Scheme: "wss", Host: workerData.Server + ".stream.highwebmedia.com", Path: "/ws/555/kmdqiune/websocket"})
+	go xWorker(workerData, url.URL{Scheme: "wss", Host: "realtime.pa.highwebmedia.com", Path: "/", RawQuery: "access_token=" + workerData.Auth + "&format=json&heartbeats=true&v=1.2&agent=ably-js%2F1.2.13%20browser&remainPresentFor=0"})
+	//go xWorker(workerData)
 }

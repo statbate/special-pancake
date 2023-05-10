@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
+	//"net/url"
+	//"strconv"
 	"time"
+	"net/url"
 
 	"github.com/gorilla/websocket"
+	jsoniter "github.com/json-iterator/go"
 )
 
 var uptime = time.Now().Unix()
@@ -19,7 +21,7 @@ func mapRooms() {
 	for {
 		select {
 		case m := <-rooms.Add:
-			data[m.room] = &Info{Server: m.Server, Proxy: m.Proxy, Rid: m.Rid, Start: m.Start, Last: m.Last, Online: m.Online, Income: m.Income, Dons: m.Dons, Tips: m.Tips, ch: m.ch}
+			data[m.room] = &Info{Id: m.Id, Auth: m.Auth, Proxy: m.Proxy, Rid: m.Rid, Start: m.Start, Last: m.Last, Online: m.Online, Income: m.Income, Dons: m.Dons, Tips: m.Tips, ch: m.ch}
 
 		case s := <-rooms.Json:
 			j, err := json.Marshal(data)
@@ -66,14 +68,14 @@ func reconnectRoom(workerData Info) {
 	n := randInt(10, 30)
 	fmt.Printf("Sleeping %d seconds...\n", n)
 	time.Sleep(time.Duration(n) * time.Second)
-	fmt.Println("reconnect:", workerData.room, workerData.Server, workerData.Proxy)
+	fmt.Println("reconnect:", workerData.room, workerData.Id, workerData.Auth, workerData.Proxy)
 	workerData.Last = time.Now().Unix()
 	startRoom(workerData)
 }
 
 func xWorker(workerData Info, u url.URL) {
 
-	fmt.Println("Start", workerData.room, "server", workerData.Server, "proxy", workerData.Proxy)
+	fmt.Println("Start", workerData.room, "room_id", workerData.Id, "auth", workerData.Auth, "proxy", workerData.Proxy)
 
 	rooms.Add <- workerData
 
@@ -101,11 +103,82 @@ func xWorker(workerData Info, u url.URL) {
 	}
 	defer c.Close()
 
-	leave := false
-	var timeout int64
-
 	dons := make(map[string]struct{})
-
+	
+	initMessages := []string{
+		`{"action":10,"flags":327680,"channel":"room:tip_alert:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:purchase:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:fanclub:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:message:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"global:push_service","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room_anon:presence:` + workerData.Id + `:0","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:quality_update:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:notice:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:enter_leave:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:password_protected:` + workerData.Id + `:13","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:mod_promoted:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:mod_revoked:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:status:` + workerData.Id + `:13","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:title_change:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:silence:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:kick:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:update:` + workerData.Id + `","params":{}}`,
+		`{"action":10,"flags":327680,"channel":"room:settings:` + workerData.Id + `","params":{}}`,
+	}
+	
+	c.SetReadDeadline(time.Now().Add(1 * time.Minute))
+	_, message, err := c.ReadMessage()
+	if err != nil {
+		fmt.Println(err.Error(), workerData.room)
+		return
+	}
+	
+	slog <- saveLog{Rid: workerData.Rid, Now: time.Now().Unix(), Mes: string(message)}
+	
+	input := struct {
+		Action   int    `json:"action"`
+		Key      string `json:"connectionkey"`
+		Error    jsoniter.RawMessage `json:"error"`
+		Channel  string `json:"channel"`
+		Messages jsoniter.RawMessage `json:"messages"`
+	}{}
+	
+	if err := json.Unmarshal(message, &input); err != nil {
+		fmt.Println(err.Error(), workerData.room)
+		return
+	}
+	
+	//if input.Key == "" {
+	//	fmt.Println("no connectionKey", workerData.room, string(message))
+	//	return
+	//}
+			
+	if err = c.WriteMessage(websocket.TextMessage, []byte(`{"action":17, "auth":{"accessToken":"`+workerData.Auth+`"}}`)); err != nil {
+		fmt.Println(err.Error(), workerData.room)
+		return
+	}
+	
+	_, message, err = c.ReadMessage()
+	if err != nil {
+		fmt.Println(err.Error(), workerData.room)
+		return
+	}
+	
+	//fmt.Println(`{"action":16, "connectionKey":"`+input.Key+`","connectionSerial": -1}`)
+	
+	//if err = c.WriteMessage(websocket.TextMessage, []byte(`{"action":16, "connectionKey":"`+input.Key+`","connectionSerial": -1}`)); err != nil {
+	//	fmt.Println(err.Error(), workerData.room)
+	//	return
+	//}
+	
+	for _, im := range initMessages {
+		if err = c.WriteMessage(websocket.TextMessage, []byte(im)); err != nil {
+			fmt.Println(err.Error(), workerData.room)
+			return
+		}
+	}
+	
+	
 	for {
 
 		select {
@@ -119,9 +192,9 @@ func xWorker(workerData Info, u url.URL) {
 		_, message, err := c.ReadMessage()
 		if err != nil {
 			fmt.Println(err.Error(), workerData.room)
-			if workerData.Income > 1 && !leave {
-				go reconnectRoom(workerData)
-			}
+			//if workerData.Income > 1 {
+			//	go reconnectRoom(workerData)
+			//}
 			return
 		}
 
@@ -135,131 +208,71 @@ func xWorker(workerData Info, u url.URL) {
 		m := string(message)
 		slog <- saveLog{Rid: workerData.Rid, Now: now, Mes: m}
 
-		if leave && now > timeout {
-			fmt.Println("room_leave exit:", workerData.room)
-			return
-		}
+		//fmt.Println(m)
 
 		if now > workerData.Last+60*20 {
 			fmt.Println("no_mes exit:", workerData.room)
 			return
 		}
-
-		if m == "o" {
-			anon := "__anonymous__" + randString(9)
-			if err = c.WriteMessage(websocket.TextMessage, []byte(`["{\"method\":\"connect\",\"data\":{\"user\":\"`+anon+`\",\"password\":\"anonymous\",\"room\":\"`+workerData.room+`\",\"room_password\":\"12345\"}}"]`)); err != nil {
-				fmt.Println(err.Error(), workerData.room)
-				return
-			}
-			continue
-		}
-
-		if m == "h" {
-			if err = c.WriteMessage(websocket.TextMessage, []byte(`["{\"method\":\"updateRoomCount\",\"data\":{\"model_name\":\"`+workerData.room+`\",\"private_room\":\"false\"}}"]`)); err != nil {
-				fmt.Println(err.Error(), workerData.room)
-				return
-			}
-			continue
-		}
-
-		// remove a[...]
-		if len(m) > 3 && m[0:2] == "a[" {
-			m, _ = strconv.Unquote(m[2 : len(m)-1])
-		}
-
-		input := struct {
-			Method string   `json:"method"`
-			Args   []string `json:"args"`
-		}{}
-
-		if err := json.Unmarshal([]byte(m), &input); err != nil {
+		
+		if err := json.Unmarshal(message, &input); err != nil {
 			fmt.Println(err.Error(), workerData.room)
-			continue
+			break
 		}
-
-		if input.Method == "onAuthResponse" {
-			if err = c.WriteMessage(websocket.TextMessage, []byte(`["{\"method\":\"joinRoom\",\"data\":{\"room\":\"`+workerData.room+`\"}}"]`)); err != nil {
-				fmt.Println(err.Error(), workerData.room)
-				return
-			}
-			continue
-		}
-
-		if input.Method == "onRoomMsg" {
+		
+		//if len(string(input.Error)) > 1 {
+		//	fmt.Println(string(input.Error), workerData.room)
+		//	return
+		//}
+		
+		if input.Action == 15 {
+			
 			workerData.Last = now
 			rooms.Add <- workerData
-			continue
-		}
-
-		if input.Method == "onRoomCountUpdate" {
-			online, err := strconv.Atoi(input.Args[0])
-			if err == nil {
-				if online < 10 {
-					fmt.Println("few viewers room:", workerData.room)
-					return
-				}
-			}
-			workerData.Online = input.Args[0]
-			rooms.Add <- workerData
-			continue
-		}
-
-		if input.Method == "onPersonallyKicked" {
-			fmt.Println("onPersonallyKicked room:", workerData.room)
-			go reconnectRoom(workerData)
-			return
-		}
-
-		if input.Method == "onNotify" {
-			workerData.Last = now
-			rooms.Add <- workerData
-
-			arg := struct {
-				Type   string `json:"type"`
-				Name   string `json:"username"`
-				From   string `json:"from_username"`
-				Amount int64  `json:"amount"`
-			}{}
-
-			if err := json.Unmarshal([]byte(input.Args[0]), &arg); err != nil {
-				fmt.Println(err.Error(), workerData.room)
-				continue
-			}
-
-			if arg.Type == "clear_app" {
-				leave = true
-				timeout = now + 60*10
-				continue
-			}
-
-			if arg.Type == "room_leave" && workerData.room == arg.Name {
-				leave = true
-				timeout = now + 60*10
-				//fmt.Println("room_leave:", workerData.room)
-				continue
-			}
-
-			if arg.Type == "room_entry" && workerData.room == arg.Name {
-				leave = false
-				//fmt.Println("room_entry:", workerData.room)
-				continue
-			}
-
-			if arg.Type == "tip_alert" && len(arg.From) > 3 && arg.Amount > 0 {
-				workerData.Tips++
-				if _, ok := dons[arg.From]; !ok {
-					dons[arg.From] = struct{}{}
-					workerData.Dons++
-				}
-				save <- saveData{Room: workerData.room, From: arg.From, Rid: workerData.Rid, Amount: arg.Amount, Now: now}
-				workerData.Income += arg.Amount
-				rooms.Add <- workerData
-				if leave {
-					timeout = now + 60*20
+			
+			if input.Channel == "room:tip_alert:"+workerData.Id {
+				tips := []struct {
+					Data string `json:"data"`
+				}{}
+				
+				if err := json.Unmarshal(input.Messages, &tips); err != nil {
+					fmt.Println(err.Error(), workerData.room)
+					continue
 				}
 
-				// fmt.Println(donate.From)
-				// fmt.Println(donate.Amount)
+				donate := struct {
+					Name   string `json:"to_username"`
+					From   string `json:"from_username"`
+					Amount int64  `json:"amount"`
+				}{}
+
+				for _, tip := range tips {
+					if err := json.Unmarshal([]byte(tip.Data), &donate); err != nil {
+						fmt.Println(err.Error(), workerData.room)
+						continue
+					}
+					
+					if donate.Amount < 1 {
+						fmt.Println("empty amount", workerData.room)
+						continue
+					}
+					
+					if len(donate.From) < 4 {
+						donate.From = "anon_tips"
+					}
+					
+					workerData.Tips++
+					if _, ok := dons[donate.From]; !ok {
+						dons[donate.From] = struct{}{}
+						workerData.Dons++
+					}
+					
+					save <- saveData{Room: workerData.room, From: donate.From, Rid: workerData.Rid, Amount: donate.Amount, Now: now}
+					workerData.Income += donate.Amount
+					rooms.Add <- workerData
+							
+					fmt.Println(donate.From, "send", donate.Amount, "tokens")
+				}
 			}
 		}
 	}
