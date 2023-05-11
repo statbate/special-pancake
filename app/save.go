@@ -131,16 +131,18 @@ func saveDB() {
 
 			if m.Amount > 99 {
 				msg, err := json.Marshal(struct {
+					Chanel  string `json:"chanel"`
 					Room    string `json:"room"`
 					Donator string `json:"donator"`
 					Amount  int64  `json:"amount"`
 				}{
+					Chanel:  "chaturbate",
 					Room:    m.Room,
 					Donator: m.From,
 					Amount:  m.Amount,
 				})
 				if err == nil {
-					ws.Send <- msg
+					socketServer <- msg
 				}
 			}
 
@@ -154,10 +156,14 @@ func saveDB() {
 			if minutes >= 5 && now > index["last"]+30 {
 				seconds += minutes * 60
 				msg, err := json.Marshal(struct {
-					Index int64 `json:"index"`
-				}{Index: index["tokens"] / int64(seconds) * 3600 / 1000 * 5 / 100})
+					Chanel string `json:"chanel"`
+					Index  int64  `json:"index"`
+				}{
+					Chanel:  "chaturbate",
+					Index: index["tokens"] / int64(seconds) * 3600 / 1000 * 5 / 100
+				})
 				if err == nil {
-					ws.Send <- msg
+					socketServer <- msg
 				}
 				index["last"] = now
 			}

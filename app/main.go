@@ -28,6 +28,8 @@ var (
 	Mysql, Clickhouse *sqlx.DB
 
 	json = jsoniter.ConfigCompatibleWithStandardLibrary
+	
+	socketServer = make(chan []byte, 100)
 
 	save = make(chan saveData, 100)
 	slog = make(chan saveLog, 100)
@@ -54,6 +56,7 @@ func main() {
 	go announceCount()
 	go saveDB()
 	go saveLogs()
+	go socketHandler()
 
 	http.HandleFunc("/cmd/", cmdHandler)
 	http.HandleFunc("/list/", listHandler)
@@ -86,6 +89,19 @@ func initClickhouse() {
 		panic(err)
 	}
 	Clickhouse = db
+}
+
+func socketHandler() {
+	for {
+		select {
+		case b := <-socketServer:
+			conn, err := net.Dial("unix", "/tmp/echo.sock")
+			if err == nil {
+				conn.Write(b)
+				conn.Close()
+			}
+		}
+	}
 }
 
 func randInt(min int, max int) int {
