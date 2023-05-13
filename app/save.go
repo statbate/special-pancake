@@ -69,11 +69,24 @@ func saveDB() {
 	index := make(map[string]int64)
 
 	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	
+	cleanCache := time.NewTicker(12 * time.Hour)
+	defer cleanCache.Stop()
 
 	index = map[string]int64{"hours": int64(hours), "tokens": getSumTokens(), "last": time.Now().Unix()}
 
 	for {
 		select {
+		case <-cleanCache.C:
+			l := len(data)
+			now := time.Now().Unix()
+			for k, v := range data {
+				if now > v.Last+60*60*48 {
+					delete(data, k)
+				}
+			}
+			fmt.Println("Clean map:", l, "=>", len(data))
 		case <-ticker.C:
 			if len(bulk) > 0 {
 				tx, err := Mysql.Begin()
@@ -160,22 +173,12 @@ func saveDB() {
 					Index  int64  `json:"index"`
 				}{
 					Chanel:  "chaturbate",
-					Index: index["tokens"] / int64(seconds) * 3600 / 1000 * 5 / 100
+					Index: index["tokens"] / int64(seconds) * 3600 / 1000 * 5 / 100,
 				})
 				if err == nil {
 					socketServer <- msg
 				}
 				index["last"] = now
-			}
-
-			if randInt(0, 10000) == 777 { // 0.001%
-				l := len(data)
-				for k, v := range data {
-					if now > v.Last+60*60*48 {
-						delete(data, k)
-					}
-				}
-				fmt.Println("Clean map:", l, "=>", len(data))
 			}
 		}
 	}
@@ -184,6 +187,7 @@ func saveDB() {
 func saveLogs() {
 	bulk := []saveLog{}
 	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
