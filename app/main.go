@@ -92,14 +92,32 @@ func initClickhouse() {
 }
 
 func socketHandler() {
+	
+	var( 
+		err error
+		conn net.Conn
+	)
+	
 	for {
 		select {
 		case b := <-socketServer:
-			conn, err := net.Dial("unix", "/tmp/echo.sock")
-			if err == nil {
-				conn.Write(b)
-				conn.Close()
+			
+			if conn == nil {
+				conn, err = net.Dial("unix", "/tmp/echo.sock")
+				if err != nil {
+					fmt.Println(err.Error())
+					continue
+				}
 			}
+			
+			if conn != nil {
+				if _, err = conn.Write(b); err != nil {
+					fmt.Println(err.Error())
+					conn.Close()
+					conn = nil
+				}
+			}
+			
 		}
 	}
 }
