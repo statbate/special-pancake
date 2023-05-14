@@ -28,7 +28,7 @@ var (
 	Mysql, Clickhouse *sqlx.DB
 
 	json = jsoniter.ConfigCompatibleWithStandardLibrary
-	
+
 	socketServer = make(chan []byte, 100)
 
 	save = make(chan saveData, 100)
@@ -92,16 +92,16 @@ func initClickhouse() {
 }
 
 func socketHandler() {
-	
-	var( 
-		err error
+
+	var (
+		err  error
 		conn net.Conn
 	)
-	
+
 	for {
 		select {
 		case b := <-socketServer:
-			
+
 			if conn == nil {
 				conn, err = net.Dial("unix", "/tmp/echo.sock")
 				if err != nil {
@@ -109,7 +109,7 @@ func socketHandler() {
 					continue
 				}
 			}
-			
+
 			if conn != nil {
 				if _, err = conn.Write(b); err != nil {
 					fmt.Println(err.Error())
@@ -117,7 +117,7 @@ func socketHandler() {
 					conn = nil
 				}
 			}
-			
+
 		}
 	}
 }
@@ -159,7 +159,7 @@ func fastStart() {
 		workerData := Info{
 			room:   k,
 			Id:     v.Id,
-			Auth: 	v.Auth,
+			Auth:   v.Auth,
 			Proxy:  v.Proxy,
 			Online: v.Online,
 			Start:  v.Start,

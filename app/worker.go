@@ -5,8 +5,8 @@ import (
 	"net/http"
 	//"net/url"
 	//"strconv"
-	"time"
 	"net/url"
+	"time"
 
 	"github.com/gorilla/websocket"
 	jsoniter "github.com/json-iterator/go"
@@ -56,11 +56,11 @@ func announceCount() {
 		rooms.Count <- 0
 		l := <-rooms.Count
 		msg, err := json.Marshal(struct {
-			Chanel  string `json:"chanel"`
-			Count   int    `json:"count"`
+			Chanel string `json:"chanel"`
+			Count  int    `json:"count"`
 		}{
-			Chanel:  "chaturbate",
-			Count: l
+			Chanel: "chaturbate",
+			Count:  l,
 		})
 		if err == nil {
 			socketServer <- msg
@@ -108,7 +108,7 @@ func xWorker(workerData Info, u url.URL) {
 	defer c.Close()
 
 	dons := make(map[string]struct{})
-	
+
 	initMessages := []string{
 		`{"action":10,"flags":327680,"channel":"room:tip_alert:` + workerData.Id + `","params":{}}`,
 		`{"action":10,"flags":327680,"channel":"room:purchase:` + workerData.Id + `","params":{}}`,
@@ -129,60 +129,59 @@ func xWorker(workerData Info, u url.URL) {
 		`{"action":10,"flags":327680,"channel":"room:update:` + workerData.Id + `","params":{}}`,
 		`{"action":10,"flags":327680,"channel":"room:settings:` + workerData.Id + `","params":{}}`,
 	}
-	
+
 	c.SetReadDeadline(time.Now().Add(1 * time.Minute))
 	_, message, err := c.ReadMessage()
 	if err != nil {
 		fmt.Println(err.Error(), workerData.room)
 		return
 	}
-	
+
 	slog <- saveLog{Rid: workerData.Rid, Now: time.Now().Unix(), Mes: string(message)}
-	
+
 	input := struct {
-		Action   int    `json:"action"`
-		Key      string `json:"connectionkey"`
+		Action   int                 `json:"action"`
+		Key      string              `json:"connectionkey"`
 		Error    jsoniter.RawMessage `json:"error"`
-		Channel  string `json:"channel"`
+		Channel  string              `json:"channel"`
 		Messages jsoniter.RawMessage `json:"messages"`
 	}{}
-	
+
 	if err := json.Unmarshal(message, &input); err != nil {
 		fmt.Println(err.Error(), workerData.room)
 		return
 	}
-	
+
 	//if input.Key == "" {
 	//	fmt.Println("no connectionKey", workerData.room, string(message))
 	//	return
 	//}
-			
+
 	if err = c.WriteMessage(websocket.TextMessage, []byte(`{"action":17, "auth":{"accessToken":"`+workerData.Auth+`"}}`)); err != nil {
 		fmt.Println(err.Error(), workerData.room)
 		return
 	}
-	
+
 	_, message, err = c.ReadMessage()
 	if err != nil {
 		fmt.Println(err.Error(), workerData.room)
 		return
 	}
-	
+
 	//fmt.Println(`{"action":16, "connectionKey":"`+input.Key+`","connectionSerial": -1}`)
-	
+
 	//if err = c.WriteMessage(websocket.TextMessage, []byte(`{"action":16, "connectionKey":"`+input.Key+`","connectionSerial": -1}`)); err != nil {
 	//	fmt.Println(err.Error(), workerData.room)
 	//	return
 	//}
-	
+
 	for _, im := range initMessages {
 		if err = c.WriteMessage(websocket.TextMessage, []byte(im)); err != nil {
 			fmt.Println(err.Error(), workerData.room)
 			return
 		}
 	}
-	
-	
+
 	for {
 
 		select {
@@ -218,27 +217,27 @@ func xWorker(workerData Info, u url.URL) {
 			fmt.Println("no_mes exit:", workerData.room)
 			return
 		}
-		
+
 		if err := json.Unmarshal(message, &input); err != nil {
 			fmt.Println(err.Error(), workerData.room)
 			break
 		}
-		
+
 		//if len(string(input.Error)) > 1 {
 		//	fmt.Println(string(input.Error), workerData.room)
 		//	return
 		//}
-		
+
 		if input.Action == 15 {
-			
+
 			workerData.Last = now
 			rooms.Add <- workerData
-			
+
 			if input.Channel == "room:tip_alert:"+workerData.Id {
 				tips := []struct {
 					Data string `json:"data"`
 				}{}
-				
+
 				if err := json.Unmarshal(input.Messages, &tips); err != nil {
 					fmt.Println(err.Error(), workerData.room)
 					continue
@@ -255,26 +254,26 @@ func xWorker(workerData Info, u url.URL) {
 						fmt.Println(err.Error(), workerData.room)
 						continue
 					}
-					
+
 					if donate.Amount < 1 {
 						fmt.Println("empty amount", workerData.room)
 						continue
 					}
-					
+
 					if len(donate.From) < 4 {
 						donate.From = "anon_tips"
 					}
-					
+
 					workerData.Tips++
 					if _, ok := dons[donate.From]; !ok {
 						dons[donate.From] = struct{}{}
 						workerData.Dons++
 					}
-					
+
 					save <- saveData{Room: workerData.room, From: donate.From, Rid: workerData.Rid, Amount: donate.Amount, Now: now}
 					workerData.Income += donate.Amount
 					rooms.Add <- workerData
-							
+
 					fmt.Println(donate.From, "send", donate.Amount, "tokens")
 				}
 			}

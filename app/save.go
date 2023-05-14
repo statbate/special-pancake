@@ -70,7 +70,7 @@ func saveDB() {
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-	
+
 	cleanCache := time.NewTicker(12 * time.Hour)
 	defer cleanCache.Stop()
 
@@ -172,8 +172,8 @@ func saveDB() {
 					Chanel string `json:"chanel"`
 					Index  int64  `json:"index"`
 				}{
-					Chanel:  "chaturbate",
-					Index: index["tokens"] / int64(seconds) * 3600 / 1000 * 5 / 100,
+					Chanel: "chaturbate",
+					Index:  index["tokens"] / int64(seconds) * 3600 / 1000 * 5 / 100,
 				})
 				if err == nil {
 					socketServer <- msg
