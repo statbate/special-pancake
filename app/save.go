@@ -57,27 +57,43 @@ func getSumTokens() int64 {
 }
 
 func saveDB() {
-	hours, _, _ := time.Now().Clock()
-
 	bulk := []saveData{}
 	update := []struct {
 		Rid int64
 		Now int64
 	}{}
 
+	tokens := getSumTokens()
+	hour := time.Now().Hour()
+
 	data := make(map[string]*DonatorCache)
-	index := make(map[string]int64)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
+	sendIndex := time.NewTicker(30 * time.Second)
+	defer sendIndex.Stop()
+
 	cleanCache := time.NewTicker(12 * time.Hour)
 	defer cleanCache.Stop()
 
-	index = map[string]int64{"hours": int64(hours), "tokens": getSumTokens(), "last": time.Now().Unix()}
-
 	for {
 		select {
+		case <-sendIndex.C:
+			if time.Now().Minute() >= 5 && tokens > 0 {
+				passed := time.Now().Second() + time.Now().Minute()*60
+				msg, err := json.Marshal(struct {
+					Chanel string `json:"chanel"`
+					Index  int64  `json:"index"`
+				}{
+					Chanel: "chaturbate",
+					Index:  tokens / int64(passed) * 3600 / 1000 * 5 / 100,
+				})
+				if err == nil {
+					socketServer <- msg
+				}
+			}
+
 		case <-cleanCache.C:
 			l := len(data)
 			now := time.Now().Unix()
@@ -125,14 +141,20 @@ func saveDB() {
 		case m := <-save:
 			//fmt.Println("Save channel:", len(save), cap(save))
 
-			now := time.Now().Unix()
+			t := time.Now()
 
 			if _, ok := data[m.From]; ok {
-				data[m.From].Last = now
+				data[m.From].Last = t.Unix()
 			} else {
-				data[m.From] = &DonatorCache{Id: getDonId(m.From), Last: now}
+				data[m.From] = &DonatorCache{Id: getDonId(m.From), Last: t.Unix()}
 			}
 
+			if hour != t.Hour() {
+				tokens = 0
+				hour = t.Hour()
+			}
+
+			tokens += m.Amount
 			bulk = append(bulk, m)
 			update = append(update, struct {
 				Rid int64
@@ -157,28 +179,6 @@ func saveDB() {
 				if err == nil {
 					socketServer <- msg
 				}
-			}
-
-			hours, minutes, seconds := time.Now().Clock()
-			if int64(hours) == index["hours"] {
-				index["tokens"] += m.Amount
-			} else {
-				index = map[string]int64{"hours": int64(hours), "tokens": 0, "last": 0}
-			}
-
-			if minutes >= 5 && now > index["last"]+30 {
-				seconds += minutes * 60
-				msg, err := json.Marshal(struct {
-					Chanel string `json:"chanel"`
-					Index  int64  `json:"index"`
-				}{
-					Chanel: "chaturbate",
-					Index:  index["tokens"] / int64(seconds) * 3600 / 1000 * 5 / 100,
-				})
-				if err == nil {
-					socketServer <- msg
-				}
-				index["last"] = now
 			}
 		}
 	}
