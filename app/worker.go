@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	//"net/url"
-	//"strconv"
 	"net/url"
 	"time"
 
@@ -66,15 +64,6 @@ func announceCount() {
 			socketServer <- msg
 		}
 	}
-}
-
-func reconnectRoom(workerData Info) {
-	n := randInt(10, 30)
-	fmt.Printf("Sleeping %d seconds...\n", n)
-	time.Sleep(time.Duration(n) * time.Second)
-	fmt.Println("reconnect:", workerData.room, workerData.Id, workerData.Auth, workerData.Proxy)
-	workerData.Last = time.Now().Unix()
-	startRoom(workerData)
 }
 
 func xWorker(workerData Info, u url.URL) {
@@ -152,11 +141,6 @@ func xWorker(workerData Info, u url.URL) {
 		return
 	}
 
-	//if input.Key == "" {
-	//	fmt.Println("no connectionKey", workerData.room, string(message))
-	//	return
-	//}
-
 	if err = c.WriteMessage(websocket.TextMessage, []byte(`{"action":17, "auth":{"accessToken":"`+workerData.Auth+`"}}`)); err != nil {
 		fmt.Println(err.Error(), workerData.room)
 		return
@@ -167,13 +151,6 @@ func xWorker(workerData Info, u url.URL) {
 		fmt.Println(err.Error(), workerData.room)
 		return
 	}
-
-	//fmt.Println(`{"action":16, "connectionKey":"`+input.Key+`","connectionSerial": -1}`)
-
-	//if err = c.WriteMessage(websocket.TextMessage, []byte(`{"action":16, "connectionKey":"`+input.Key+`","connectionSerial": -1}`)); err != nil {
-	//	fmt.Println(err.Error(), workerData.room)
-	//	return
-	//}
 
 	for _, im := range initMessages {
 		if err = c.WriteMessage(websocket.TextMessage, []byte(im)); err != nil {
@@ -195,9 +172,6 @@ func xWorker(workerData Info, u url.URL) {
 		_, message, err := c.ReadMessage()
 		if err != nil {
 			fmt.Println(err.Error(), workerData.room)
-			//if workerData.Income > 1 {
-			//	go reconnectRoom(workerData)
-			//}
 			return
 		}
 

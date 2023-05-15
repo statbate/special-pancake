@@ -80,8 +80,9 @@ func saveDB() {
 	for {
 		select {
 		case <-sendIndex.C:
-			if time.Now().Minute() >= 5 && tokens > 0 {
-				passed := time.Now().Second() + time.Now().Minute()*60
+			t := time.Now()
+			if t.Minute() >= 5 && tokens > 0 {
+				passed := t.Second() + t.Minute()*60
 				msg, err := json.Marshal(struct {
 					Chanel string `json:"chanel"`
 					Index  int64  `json:"index"`
@@ -93,7 +94,6 @@ func saveDB() {
 					socketServer <- msg
 				}
 			}
-
 		case <-cleanCache.C:
 			l := len(data)
 			now := time.Now().Unix()

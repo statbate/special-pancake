@@ -113,5 +113,4 @@ func startRoom(workerData Info) {
 	workerData.ch = make(chan struct{})
 
 	go xWorker(workerData, url.URL{Scheme: "wss", Host: "realtime.pa.highwebmedia.com", Path: "/", RawQuery: "access_token=" + workerData.Auth + "&format=json&heartbeats=true&v=1.2&agent=ably-js%2F1.2.13%20browser&remainPresentFor=0"})
-	//go xWorker(workerData)
 }

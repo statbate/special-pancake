@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -45,8 +44,6 @@ var (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	startConfig()
 
 	initMysql()
@@ -120,20 +117,6 @@ func socketHandler() {
 
 		}
 	}
-}
-
-func randInt(min int, max int) int {
-	return min + rand.Intn(max-min)
-}
-
-func randString(n int) string {
-	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, n)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
-	}
-	return string(bytes)
 }
 
 func fastStart() {
