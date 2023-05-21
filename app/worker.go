@@ -166,9 +166,21 @@ func xWorker(workerData Info, u url.URL) {
 		}
 	}
 
+	ticker := time.NewTicker(60 * 60 * 8 * time.Second)
+	defer ticker.Stop()
+
+	leave := time.NewTicker(60 * 60 * 8 * time.Second)
+	defer leave.Stop()
+
 	for {
 
 		select {
+		case <-ticker.C:
+			fmt.Println("too_long exit:", workerData.room)
+			return
+		case <-leave.C:
+			fmt.Println("leave exit:", workerData.room)
+			return
 		case <-workerData.ch:
 			fmt.Println("Exit room:", workerData.room)
 			return
@@ -187,11 +199,6 @@ func xWorker(workerData Info, u url.URL) {
 
 		now := time.Now().Unix()
 
-		if now > workerData.Start+60*60*8 {
-			fmt.Println("too_long exit:", workerData.room)
-			return
-		}
-
 		m := string(message)
 		slog <- saveLog{Rid: workerData.Rid, Now: now, Mes: m}
 
@@ -207,15 +214,51 @@ func xWorker(workerData Info, u url.URL) {
 			break
 		}
 
-		//if len(string(input.Error)) > 1 {
-		//	fmt.Println(string(input.Error), workerData.room)
-		//	return
-		//}
-
 		if input.Action == 15 {
 
 			workerData.Last = now
 			rooms.Add <- workerData
+
+			if input.Channel == "room:enter_leave:"+workerData.Id {
+				type Message struct {
+					Messages []struct {
+						Data string `json:"data"`
+					} `json:"messages,omitempty"`
+				}
+				type Data struct {
+					User struct {
+						Username    string `json:"username"`
+						Gender      string `json:"gender"`
+						IsBroadcast bool   `json:"is_broadcast"`
+					} `json:"user"`
+					Action string `json:"action"`
+				}
+				topmsg := &Message{}
+				if err := json.Unmarshal(input.Messages, &topmsg); err != nil {
+					fmt.Println(err.Error(), workerData.room)
+					continue
+				}
+				for _, msg := range topmsg.Messages {
+					inmsg := &Data{}
+
+					if err := json.Unmarshal([]byte(msg.Data), inmsg); err != nil {
+						fmt.Println(err.Error(), workerData.room)
+						continue
+					}
+
+					// inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcast, inmsg.Action
+
+					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcast && inmsg.Action == "leave" {
+						fmt.Println("leave, start ticker", workerData.room)
+						leave.Reset(60 * 5 * time.Second)
+					}
+
+					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcast && inmsg.Action == "enter" {
+						fmt.Println("enter, stop ticker", workerData.room)
+						leave.Reset(60 * 60 * 8 * time.Second)
+					}
+				}
+			}
 
 			if input.Channel == "room:tip_alert:"+workerData.Id {
 				tips := []struct {
@@ -258,7 +301,7 @@ func xWorker(workerData Info, u url.URL) {
 					workerData.Income += donate.Amount
 					rooms.Add <- workerData
 
-					fmt.Println(donate.From, "send", donate.Amount, "tokens")
+					fmt.Println(donate.From, "send", donate.Amount, "tokens to", workerData.room)
 				}
 			}
 		}
