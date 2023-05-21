@@ -66,6 +66,13 @@ func announceCount() {
 	}
 }
 
+func reconnectRoom(workerData Info) {
+	time.Sleep(5 * time.Second)
+	fmt.Println("reconnect:", workerData.room, workerData.Id, workerData.Auth, workerData.Proxy)
+	workerData.Last = time.Now().Unix()
+	startRoom(workerData)
+}
+
 func xWorker(workerData Info, u url.URL) {
 
 	fmt.Println("Start", workerData.room, "room_id", workerData.Id, "auth", workerData.Auth, "proxy", workerData.Proxy)
@@ -172,6 +179,9 @@ func xWorker(workerData Info, u url.URL) {
 		_, message, err := c.ReadMessage()
 		if err != nil {
 			fmt.Println(err.Error(), workerData.room)
+			if workerData.Income > 1 {
+				go reconnectRoom(workerData)
+			}
 			return
 		}
 
