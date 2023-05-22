@@ -225,9 +225,9 @@ func xWorker(workerData Info, u url.URL) {
 				}
 				type Data struct {
 					User struct {
-						Username    string `json:"username"`
-						Gender      string `json:"gender"`
-						IsBroadcast bool   `json:"is_broadcast"`
+						Username      string `json:"username"`
+						Gender        string `json:"gender"`
+						IsBroadcaster bool   `json:"is_broadcaster"`
 					} `json:"user"`
 					Action string `json:"action"`
 				}
@@ -244,9 +244,9 @@ func xWorker(workerData Info, u url.URL) {
 						continue
 					}
 
-					fmt.Println(inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcast, inmsg.Action, workerData.room)
+					fmt.Println(inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcaster, inmsg.Action, workerData.room)
 
-					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcast {
+					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcaster {
 						if inmsg.Action == "leave" {
 							fmt.Println("leave, start ticker", workerData.room)
 							leave.Reset(60 * 5 * time.Second)
