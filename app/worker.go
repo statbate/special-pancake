@@ -221,9 +221,7 @@ func xWorker(workerData Info, u url.URL) {
 
 			if input.Channel == "room:enter_leave:"+workerData.Id {
 				type Message struct {
-					Messages []struct {
-						Data string `json:"data"`
-					} `json:"messages,omitempty"`
+					Data string `json:"data"`
 				}
 				type Data struct {
 					User struct {
@@ -233,7 +231,7 @@ func xWorker(workerData Info, u url.URL) {
 					} `json:"user"`
 					Action string `json:"action"`
 				}
-				topmsg := &Message{}
+				var topmsg []*Message
 				if err := json.Unmarshal(input.Messages, &topmsg); err != nil {
 					fmt.Println(err.Error(), workerData.room)
 					continue
