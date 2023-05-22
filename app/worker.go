@@ -236,7 +236,7 @@ func xWorker(workerData Info, u url.URL) {
 					fmt.Println(err.Error(), workerData.room)
 					continue
 				}
-				for _, msg := range topmsg.Messages {
+				for _, msg := range topmsg {
 					inmsg := &Data{}
 
 					if err := json.Unmarshal([]byte(msg.Data), inmsg); err != nil {
@@ -244,16 +244,17 @@ func xWorker(workerData Info, u url.URL) {
 						continue
 					}
 
-					// inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcast, inmsg.Action
+					fmt.Println(inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcast, inmsg.Action, workerData.room)
 
-					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcast && inmsg.Action == "leave" {
-						fmt.Println("leave, start ticker", workerData.room)
-						leave.Reset(60 * 5 * time.Second)
-					}
-
-					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcast && inmsg.Action == "enter" {
-						fmt.Println("enter, stop ticker", workerData.room)
-						leave.Reset(60 * 60 * 8 * time.Second)
+					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcast {
+						if inmsg.Action == "leave" {
+							fmt.Println("leave, start ticker", workerData.room)
+							leave.Reset(60 * 5 * time.Second)
+						}
+						if inmsg.Action == "enter" {
+							fmt.Println("enter, stop ticker", workerData.room)
+							leave.Reset(60 * 60 * 8 * time.Second)
+						}
 					}
 				}
 			}
