@@ -172,6 +172,8 @@ func xWorker(workerData Info, u url.URL) {
 	leave := time.NewTicker(60 * 60 * 8 * time.Second)
 	defer leave.Stop()
 
+	isLeave := false
+
 	for {
 
 		select {
@@ -244,19 +246,22 @@ func xWorker(workerData Info, u url.URL) {
 						continue
 					}
 
-					fmt.Println(inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcaster, inmsg.Action, workerData.room)
+					//fmt.Println(inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcaster, inmsg.Action, workerData.room)
 
 					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcaster {
 						if inmsg.Action == "leave" {
 							fmt.Println("leave, start ticker", workerData.room)
-							leave.Reset(60 * 5 * time.Second)
+							leave.Reset(60 * 10 * time.Second)
+							isLeave = true
 						}
 						if inmsg.Action == "enter" {
 							fmt.Println("enter, stop ticker", workerData.room)
 							leave.Reset(60 * 60 * 8 * time.Second)
+							isLeave = false
 						}
 					}
 				}
+				continue
 			}
 
 			if input.Channel == "room:tip_alert:"+workerData.Id {
@@ -284,6 +289,10 @@ func xWorker(workerData Info, u url.URL) {
 					if donate.Amount < 1 {
 						fmt.Println("empty amount", workerData.room)
 						continue
+					}
+
+					if isLeave {
+						leave.Reset(60 * 10 * time.Second)
 					}
 
 					if len(donate.From) < 4 {
