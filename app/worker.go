@@ -173,6 +173,8 @@ func xWorker(workerData Info, u url.URL) {
 	defer leave.Stop()
 
 	isLeave := false
+	var income int64
+	income = 0
 
 	for {
 
@@ -193,7 +195,7 @@ func xWorker(workerData Info, u url.URL) {
 		_, message, err := c.ReadMessage()
 		if err != nil {
 			fmt.Println(err.Error(), workerData.room)
-			if workerData.Income > 1 && websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+			if income > 1 && websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				go reconnectRoom(workerData)
 			}
 			return
@@ -290,6 +292,8 @@ func xWorker(workerData Info, u url.URL) {
 						fmt.Println("empty amount", workerData.room)
 						continue
 					}
+
+					income += donate.Amount
 
 					if isLeave {
 						leave.Reset(60 * 10 * time.Second)
