@@ -195,7 +195,7 @@ func xWorker(workerData Info, u url.URL) {
 		_, message, err := c.ReadMessage()
 		if err != nil {
 			fmt.Println(err.Error(), workerData.room)
-			if income > 1 && websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+			if income > 1 && !isLeave && websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				go reconnectRoom(workerData)
 			}
 			return
@@ -208,8 +208,8 @@ func xWorker(workerData Info, u url.URL) {
 
 		//fmt.Println(m)
 
-		if now > workerData.Last+60*20 {
-			fmt.Println("no_mes exit:", workerData.room)
+		if now > workerData.Last+60*60 {
+			fmt.Println("no_tips exit:", workerData.room)
 			return
 		}
 
@@ -219,9 +219,6 @@ func xWorker(workerData Info, u url.URL) {
 		}
 
 		if input.Action == 15 {
-
-			workerData.Last = now
-			rooms.Add <- workerData
 
 			if input.Channel == "room:enter_leave:"+workerData.Id {
 				type Message struct {
@@ -310,6 +307,7 @@ func xWorker(workerData Info, u url.URL) {
 					}
 
 					save <- saveData{Room: workerData.room, From: donate.From, Rid: workerData.Rid, Amount: donate.Amount, Now: now}
+					workerData.Last = now
 					workerData.Income += donate.Amount
 					rooms.Add <- workerData
 
