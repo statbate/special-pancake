@@ -69,7 +69,6 @@ func announceCount() {
 func reconnectRoom(workerData Info) {
 	time.Sleep(5 * time.Second)
 	fmt.Println("reconnect:", workerData.room, workerData.Id, workerData.Auth, workerData.Proxy)
-	workerData.Last = time.Now().Unix()
 	startRoom(workerData)
 }
 
