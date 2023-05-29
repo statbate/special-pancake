@@ -247,12 +247,12 @@ func xWorker(workerData Info, u url.URL) {
 					//fmt.Println(inmsg.User.Username, inmsg.User.Gender, inmsg.User.IsBroadcaster, inmsg.Action, workerData.room)
 
 					if inmsg.User.Username == workerData.room && inmsg.User.IsBroadcaster {
-						if inmsg.Action == "leave" {
+						if inmsg.Action == "leave" && !isLeave {
 							fmt.Println("leave, start ticker", workerData.room)
 							leave.Reset(60 * 10 * time.Second)
 							isLeave = true
 						}
-						if inmsg.Action == "enter" {
+						if inmsg.Action == "enter" && isLeave {
 							fmt.Println("enter, stop ticker", workerData.room)
 							leave.Reset(60 * 60 * 8 * time.Second)
 							isLeave = false
