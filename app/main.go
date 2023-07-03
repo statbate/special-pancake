@@ -55,9 +55,9 @@ func main() {
 	go saveLogs()
 	go socketHandler()
 
-	http.HandleFunc("/cmd/", cmdHandler)
-	http.HandleFunc("/list/", listHandler)
-	http.HandleFunc("/debug/", debugHandler)
+	http.HandleFunc("/chaturbate/cmd/", cmdHandler)
+	http.HandleFunc("/chaturbate/list/", listHandler)
+	http.HandleFunc("/chaturbate/debug/", debugHandler)
 
 	go fastStart()
 
@@ -99,8 +99,8 @@ func socketHandler() {
 		select {
 		case b := <-socketServer:
 
-			if conn == nil {
-				conn, err = net.Dial("unix", "/tmp/echo.sock")
+			if conn == nil || conn.RemoteAddr() == nil {
+				conn, err = net.DialTimeout("unix", "/tmp/echo.sock", time.Second*5)
 				if err != nil {
 					fmt.Println(err.Error())
 					continue
