@@ -28,10 +28,10 @@ var (
 
 	json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-	socketServer = make(chan []byte, 100)
+	socketServer = make(chan []byte, 1)
 
-	save = make(chan saveData, 100)
-	slog = make(chan saveLog, 100)
+	save = make(chan saveData, 1)
+	slog = make(chan saveLog, 32)
 
 	rooms = &Rooms{
 		Count: make(chan int),
@@ -99,8 +99,10 @@ func socketHandler() {
 		select {
 		case b := <-socketServer:
 
+			//fmt.Println("socketServer", len(socketServer), cap(socketServer))
+
 			if conn == nil || conn.RemoteAddr() == nil {
-				conn, err = net.DialTimeout("unix", "/tmp/echo.sock", time.Second*5)
+				conn, err = net.DialTimeout("unix", "/tmp/echo.sock", time.Millisecond*10)
 				if err != nil {
 					fmt.Println(err.Error())
 					continue

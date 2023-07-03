@@ -204,6 +204,7 @@ func saveLogs() {
 				bulk = nil
 			}
 		case m := <-slog:
+			//fmt.Println("slog", len(slog), cap(slog))
 			if len(m.Mes) > 0 {
 				bulk = append(bulk, m)
 			}
